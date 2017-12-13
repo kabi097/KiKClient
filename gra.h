@@ -14,6 +14,44 @@ class Gra : public QMainWindow
     Q_OBJECT
 
 public:
+
+    //-------------------------------
+    typedef enum
+    {
+      DOLACZ,
+      POTWIERDZENIE,
+      WIAD_TEKST,
+      RUCH
+    } type_t;
+
+    struct wiadomosc
+    {
+      qint8 type;
+      union
+      {
+        struct
+        {
+          char imie[20];
+        } dolacz;
+
+        struct
+        {
+          qint8 rezultat;
+        } potw;
+
+        struct
+        {
+          char napis[80];
+        } wiadomosc;
+
+        struct
+        {
+          qint8 numer;
+        } ruch;
+      } dane;
+    }  __attribute__ ((packed));
+    //-------------------------------
+
     typedef enum
     {
       G_KOLKO   = 0,

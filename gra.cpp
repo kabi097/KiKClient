@@ -102,7 +102,13 @@ Gra::~Gra()
 void Gra::wybranoPole(int i)
 {
     char wybrano = char(i);
-    socket->write(&wybrano);
+
+    struct wiadomosc *moja_wiadomosc;
+    moja_wiadomosc->type = WIAD_TEKST;
+    strcpy(moja_wiadomosc->dane.wiadomosc.napis, "Hejo");
+    bufor = (char *)moja_wiadomosc;
+
+    socket->write(bufor);
     //Wszystko co poniżej trzeba przenieść do slotu
     socket->waitForReadyRead(3000);
     QByteArray data = socket->readAll();
@@ -111,26 +117,4 @@ void Gra::wybranoPole(int i)
         numer = int(data.at(i))-48;
         pole[i]->zaznacz_ruch((Pole::ruch_t)numer);
     }
-    /*
-    Pole::ruch_t ruch;
-    if (aktualny_gracz==G_KOLKO) ruch = Pole::KOLKO;
-    if (aktualny_gracz==G_KRZYZYK) ruch = Pole::KRZYZYK;
-    if (pole[i]->zaznacz_ruch(ruch) == true) {
-        if (rezultat_gry()!=NIEROZSTRZYGNIETA) {
-            QMessageBox okno;
-            okno.setText("Koniec gry");
-            if (rezultat_gry()==WYGRYWA_KOLKO) {
-                okno.setInformativeText("Wygrało kółko.");
-            } else if (rezultat_gry()==WYGRYWA_KRZYZYK) {
-                okno.setInformativeText("Wygrał krzyżyk.");
-            } else {
-                okno.setInformativeText("REMIS");
-            }
-            okno.exec();
-            czysc_plansze();
-        } else {
-            zmien_gracza();
-        }
-    }
-    */
 }
