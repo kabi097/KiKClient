@@ -101,17 +101,21 @@ Gra::~Gra()
 
 void Gra::wybranoPole(int i)
 {
-    char wybrano = char(i);
-
+    char wybrano = (char)i;
+    qDebug() << wybrano;
+    /*
     struct wiadomosc *moja_wiadomosc;
     moja_wiadomosc->type = WIAD_TEKST;
     strcpy(moja_wiadomosc->dane.wiadomosc.napis, "Hejo");
     bufor = (char *)moja_wiadomosc;
+    */
 
-    socket->write(bufor);
-    //Wszystko co poniżej trzeba przenieść do slotu
+    socket->write(&wybrano);
     socket->waitForReadyRead(3000);
     QByteArray data = socket->readAll();
+    if (data.at(0)==-1) {
+        QMessageBox::information(this,"Koniec gry", "Koniec gry");
+    }
     int numer;
     for (int i=0; i<9; i++) {
         numer = int(data.at(i))-48;

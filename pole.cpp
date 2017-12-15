@@ -10,17 +10,31 @@ Pole::Pole(int nr, QWidget *parent) : QPushButton(parent)
 
 bool Pole::zaznacz_ruch(Pole::ruch_t nowa_wartosc)
 {
+    if (nowa_wartosc == KRZYZYK) {
+        setText("X");
+    } else if (nowa_wartosc == KOLKO) {
+        setText("O");
+    } else {
+        setText("");
+    }
+    aktualna_wartosc = nowa_wartosc;
+    return true;
+
+    /*
     if (aktualna_wartosc != BRAK) {
       return false;
     } else {
         if (nowa_wartosc == KRZYZYK) {
             setText("X");
-        } else {
+        } else if (nowa_wartosc == KOLKO) {
             setText("O");
+        } else {
+            setText("");
         }
         aktualna_wartosc = nowa_wartosc;
         return true;
     }
+    */
 }
 
 void Pole::mouseReleaseEvent(QMouseEvent *e)
