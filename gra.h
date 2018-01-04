@@ -14,11 +14,8 @@ class Gra : public QMainWindow
     Q_OBJECT
 
 public:
-
-    //-------------------------------
     typedef enum
     {
-      DOLACZ,
       POTWIERDZENIE,
       WIAD_TEKST,
       RUCH
@@ -27,13 +24,9 @@ public:
     struct wiadomosc
     {
       qint8 type;
+      qint8 len;
       union
       {
-        struct
-        {
-          char imie[20];
-        } dolacz;
-
         struct
         {
           qint8 rezultat;
@@ -46,11 +39,10 @@ public:
 
         struct
         {
-          qint8 numer;
+          qint8 number;
         } ruch;
       } dane;
     }  __attribute__ ((packed));
-    //-------------------------------
 
     typedef enum
     {
@@ -72,6 +64,7 @@ public:
     //int ocen_rezultat();
     void zmien_gracza();
     void czysc_plansze();
+    QByteArray IntToArray(qint32 source);
 
     int nrPola;
 

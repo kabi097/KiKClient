@@ -99,23 +99,49 @@ Gra::~Gra()
 {
 }
 
+
+
+QByteArray Gra::IntToArray(qint32 source) //Use qint32 to ensure that the number have 4 bytes
+{
+    //Avoid use of cast, this is the Qt way to serialize objects
+    QByteArray temp;
+    QDataStream data(&temp, QIODevice::ReadWrite);
+    data << source;
+    return temp;
+}
+
 void Gra::wybranoPole(int i)
 {
-    char wybrano = (char)i;
-    qDebug() << wybrano;
-    /*
-    struct wiadomosc *moja_wiadomosc;
-    moja_wiadomosc->type = WIAD_TEKST;
-    strcpy(moja_wiadomosc->dane.wiadomosc.napis, "Hejo");
-    bufor = (char *)moja_wiadomosc;
-    */
+//    /*
+//    char bufor;
+//    struct wiadomosc *mojaWiad = (struct wiadomosc *) bufor;
+//    mojaWiad->type = WIAD_TEKST;
+//    strcpy(mojaWiad->dane.wiadomosc.napis, "Hello World");
+//    mojaWiad->len = strlen(mojaWiad->dane.wiadomosc.napis)+1+3;
+//    */
+//    char text[80];
+//    strcpy(text,"Hello World!");
+//    quint8 size = sizeof(text);
 
-    socket->write(&wybrano);
+//    QByteArray data;
+//    QDataStream in(&data, QIODevice::WriteOnly);
+//    in << WIAD_TEKST;
+//    //in << size;
+//    in << text;
+
+//    if(socket->state() == QAbstractSocket::ConnectedState)
+//    {
+//        socket->write(IntToArray(data.size())); //write size of data
+//        socket->write(data); //write the data itself
+//        socket->waitForBytesWritten();
+//    }
+    char input = (char)i;
+    socket->write(&input);
     socket->waitForReadyRead(3000);
     QByteArray data = socket->readAll();
-    if (data.at(0)==-1) {
-        QMessageBox::information(this,"Koniec gry", "Koniec gry");
-    }
+//    if (data.at(0)==-1) {
+//        QMessageBox::information(this,"Koniec gry", "Koniec gry");
+//    }
     int numer;
     for (int i=0; i<9; i++) {
         numer = int(data.at(i))-48;
