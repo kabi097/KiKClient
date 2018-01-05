@@ -100,7 +100,6 @@ Gra::~Gra()
 }
 
 
-
 QByteArray Gra::IntToArray(qint32 source) //Use qint32 to ensure that the number have 4 bytes
 {
     //Avoid use of cast, this is the Qt way to serialize objects
@@ -135,13 +134,27 @@ void Gra::wybranoPole(int i)
 //        socket->write(data); //write the data itself
 //        socket->waitForBytesWritten();
 //    }
-    char input = (char)i;
-    socket->write(&input);
+
+    char bajty[120];
+
+    struct wiadomosc *tmp = (struct wiadomosc *) bajty;
+    tmp->type = 25;
+    tmp->dane.ruch.number = 3;
+    tmp->len = 4;
+
+//    char input = (char)i+1;
+    //socket->write((char *) tmp, tmp->len);
+    socket->write(bajty, tmp->len);
+
+
+
     socket->waitForReadyRead(3000);
     QByteArray data = socket->readAll();
-//    if (data.at(0)==-1) {
-//        QMessageBox::information(this,"Koniec gry", "Koniec gry");
-//    }
+    if (data.at(0)==-1) {
+        QMessageBox::information(this,"Koniec gry", "Koniec gry");
+    }
+
+    qDebug() << data;
     int numer;
     for (int i=0; i<9; i++) {
         numer = int(data.at(i))-48;
