@@ -3,10 +3,13 @@
 
 #include <QMainWindow>
 #include <QGridLayout>
+#include <QVBoxLayout>
 #include <QDebug>
 #include <QPushButton>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QTcpSocket>
+#include <QHostAddress>
 #include "pole.h"
 
 class Gra : public QMainWindow
@@ -16,32 +19,41 @@ class Gra : public QMainWindow
 public:
     typedef enum
     {
-      POTWIERDZENIE,
-      WIAD_TEKST,
-      RUCH
+        POTWIERDZENIE,
+        WIAD_TEKST,
+        RUCH,
+        PODDAJ
     } type_t;
+
 
     struct wiadomosc
     {
-      qint8 type;
-      qint8 len;
-      union
-      {
-        struct
+        uint8_t sync;
+        uint8_t type;
+        uint8_t length;
+        union
         {
-          qint8 rezultat;
-        } potw;
+            struct
+            {
+                uint8_t poddalSie;
+            } poddanie;
 
-        struct
-        {
-          char napis[80];
-        } wiadomosc;
+            struct
+            {
+                uint8_t rezultat;
+            } potwierdzenie;
 
-        struct
-        {
-          qint8 number;
-        } ruch;
-      } dane;
+            struct
+            {
+                char napis[80];
+            } czat;
+
+            struct
+            {
+                uint8_t x;
+                uint8_t y;
+            } ruch;
+        } dane;
     }  __attribute__ ((packed));
 
     typedef enum
@@ -75,8 +87,15 @@ private:
     Pole **pole;
     rezultat_t rezultat;
     gracz_t aktualny_gracz;
+    QPushButton *connectButton;
+    QLineEdit *address;
+    QLineEdit *port;
 
 public slots:
+    void przyciskClicked();
+    void polacz();
+    void rozlacz();
+    void czytajDane();
     void wybranoPole(int i);
 };
 

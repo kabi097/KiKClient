@@ -3,8 +3,15 @@
 Gra::Gra(QWidget *parent) :
     QMainWindow(parent)
 {
+    socket = new QTcpSocket(this);
+    connect(socket,SIGNAL(disconnected()),this,SLOT(rozlacz()));
+    connect(socket,SIGNAL(readyRead()),SLOT(czytajDane()));
+
     setWindowTitle("Kółko i krzyżyk");
     QWidget *plansza = new QWidget(this);
+
+    QVBoxLayout *layout = new QVBoxLayout;
+
     QGridLayout *siatka = new QGridLayout;
 
     int col=0;
@@ -15,17 +22,21 @@ Gra::Gra(QWidget *parent) :
         siatka->addWidget(pole[i],i%3,col);
         if (i%3==2) col++;
     }
+    address = new QLineEdit(this);
+    address->setText("127.0.0.1");
+    siatka->addWidget(address,4,0,1,2);
+
+    port = new QLineEdit(this);
+    port->setText("2222");
+    port->setMaximumSize(50,100);
+    siatka->addWidget(port,4,2);
+
+    connectButton = new QPushButton("Połącz", this);
+    siatka->addWidget(connectButton,5,0,3,3);
+    connect(connectButton,SIGNAL(clicked(bool)),this,SLOT(przyciskClicked()));
 
     rezultat = NIEROZSTRZYGNIETA;
     aktualny_gracz = G_KOLKO;
-
-    socket = new QTcpSocket(this);
-    socket->connectToHost("127.0.0.1",2222);
-    if (socket->waitForConnected()) {
-        qDebug() << "Połączono z serwerem";
-    } else {
-        qDebug() << "Nie udało się połączyć z serwerem";
-    }
 
     plansza->setLayout(siatka);
     setCentralWidget(plansza);
@@ -99,10 +110,72 @@ Gra::~Gra()
 {
 }
 
+void Gra::przyciskClicked()
+{
+    if (socket->state() == QAbstractSocket::ConnectedState) {
+        socket->abort();
+    } else {
+        polacz();
+    }
+}
+
+void Gra::polacz()
+{
+    QHostAddress hostip(address->text());
+    quint16 hostport = port->text().toShort();
+    if (hostip.isNull()!=true && hostport>0 && hostport<10000) {
+        socket->connectToHost(hostip,hostport);
+        if (socket->waitForConnected()) {
+            qDebug() << "Połączono z serwerem";
+            connectButton->setText("Rozłącz");
+            address->setDisabled(true);
+            port->setDisabled(true);
+        } else {
+            qDebug() << "Nie udało się połączyć z serwerem";
+        }
+    }
+}
+
+void Gra::rozlacz()
+{
+    if (socket->state() == QAbstractSocket::ConnectedState) {
+        socket->abort();
+    }
+    qDebug() << "Rozłączono z serwerem";
+    czysc_plansze();
+    connectButton->setText("Połącz");
+    address->setDisabled(false);
+    port->setDisabled(false);
+}
+
+void Gra::czytajDane()
+{
+    QByteArray dane = socket->read(120);
+    //odczytałem dane.length();
+    const char *tmp = dane.constData();
+
+    struct Gra::wiadomosc *wiad = (struct Gra::wiadomosc *) tmp; //dane.constData();
+
+    switch (wiad->type) {
+    case Gra::WIAD_TEKST:
+
+        break;
+    case Gra::POTWIERDZENIE:
+
+        break;
+    default:
+
+        break;
+    }
+
+//    if (data.at(0)==-1) {
+//        QMessageBox::information(this,"Koniec gry", "Koniec gry");
+//    }
+}
+
 
 QByteArray Gra::IntToArray(qint32 source) //Use qint32 to ensure that the number have 4 bytes
 {
-    //Avoid use of cast, this is the Qt way to serialize objects
     QByteArray temp;
     QDataStream data(&temp, QIODevice::ReadWrite);
     data << source;
@@ -111,53 +184,22 @@ QByteArray Gra::IntToArray(qint32 source) //Use qint32 to ensure that the number
 
 void Gra::wybranoPole(int i)
 {
-//    /*
-//    char bufor;
-//    struct wiadomosc *mojaWiad = (struct wiadomosc *) bufor;
-//    mojaWiad->type = WIAD_TEKST;
-//    strcpy(mojaWiad->dane.wiadomosc.napis, "Hello World");
-//    mojaWiad->len = strlen(mojaWiad->dane.wiadomosc.napis)+1+3;
-//    */
-//    char text[80];
-//    strcpy(text,"Hello World!");
-//    quint8 size = sizeof(text);
+    if (socket->state() == QAbstractSocket::ConnectedState) {
 
-//    QByteArray data;
-//    QDataStream in(&data, QIODevice::WriteOnly);
-//    in << WIAD_TEKST;
-//    //in << size;
-//    in << text;
-
-//    if(socket->state() == QAbstractSocket::ConnectedState)
-//    {
-//        socket->write(IntToArray(data.size())); //write size of data
-//        socket->write(data); //write the data itself
-//        socket->waitForBytesWritten();
-//    }
-
-    char bajty[120];
-
-    struct wiadomosc *tmp = (struct wiadomosc *) bajty;
-    tmp->type = 25;
-    tmp->dane.ruch.number = 3;
-    tmp->len = 4;
-
-//    char input = (char)i+1;
-    //socket->write((char *) tmp, tmp->len);
-    socket->write(bajty, tmp->len);
+        char bajty[120];
+        struct wiadomosc *tmp = (struct wiadomosc *) bajty;
+        //strcpy(tmp->dane.wiadomosc.napis,"Hello World!");
+        tmp->type = Gra::RUCH;
+        tmp->dane.ruch.x = i/3;
+        tmp->dane.ruch.y = i%3;
+        //tmp->len = sizeof(bajty)+4; //4 - na cholere to 4???
+        tmp->length = sizeof(bajty); //4
 
 
+        socket->write(bajty, tmp->length);
+        socket->waitForReadyRead(3000);
 
-    socket->waitForReadyRead(3000);
-    QByteArray data = socket->readAll();
-    if (data.at(0)==-1) {
-        QMessageBox::information(this,"Koniec gry", "Koniec gry");
-    }
-
-    qDebug() << data;
-    int numer;
-    for (int i=0; i<9; i++) {
-        numer = int(data.at(i))-48;
-        pole[i]->zaznacz_ruch((Pole::ruch_t)numer);
+        //char input = (char)i+1;
+        //socket->write((char *) tmp, tmp->len);
     }
 }
