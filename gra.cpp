@@ -22,7 +22,7 @@ Gra::Gra(QWidget *parent) :
     for (int i=0; i<9; i++) {
         pole[i] = new Pole(i);
         connect(pole[i],SIGNAL(wybrano(int)),this,SLOT(wybranoPole(int)));
-        siatka->addWidget(pole[i],i%3,col);
+        siatka->addWidget(pole[i],col,i%3);
         if (i%3==2) col++;
     }
     address = new QLineEdit(this);
@@ -144,7 +144,7 @@ void Gra::polacz()
     quint16 hostport = port->text().toShort();
     if (hostip.isNull()!=true && hostport>0 && hostport<10000) {
         socket->connectToHost(hostip,hostport);
-        if (socket->waitForConnected()) {
+        if (socket->waitForConnected(3000)) {
             qDebug() << "Połączono z serwerem";
             connectButton->setText("Rozłącz");
             address->setDisabled(true);
@@ -171,15 +171,10 @@ void Gra::rozlacz()
 
 void Gra::czytajDane()
 {
-    QByteArray dane = socket->read(120);
+    QByteArray dane = socket->readAll();
     //odczytałem dane.length();
     const char *tmp = dane.constData();
-
     struct Gra::wiadomosc *wiad = (struct Gra::wiadomosc *) tmp; //dane.constData();
-
-    //TODO
-    QString oldinfo;
-    QString newinfo;
     plansza_t mojaPolansza;
 
     switch (wiad->type) {
@@ -193,18 +188,15 @@ void Gra::czytajDane()
         }
         break;
     case Gra::POTWIERDZENIE:
-//        if ((rezultat_t)wiad->dane.potwierdzenie.rezultat != REMIS) {
-//            koniecGry((rezultat_t)wiad->dane.potwierdzenie.rezultat);
-//        }
+        qDebug() << "POTWIERDZENIE: " << wiad->dane.potwierdzenie.rezultat;
+        if ((rezultat_t)wiad->dane.potwierdzenie.rezultat != NIEROZSTRZYGNIETA) {
+            koniecGry((rezultat_t)wiad->dane.potwierdzenie.rezultat);
+        }
         break;
     default:
 
         break;
     }
-
-//    if (data.at(0)==-1) {
-//        QMessageBox::information(this,"Koniec gry", "Koniec gry");
-//    }
 }
 
 void Gra::wyslijTekst()
@@ -274,7 +266,14 @@ void Gra::koniecGry(Gra::rezultat_t wynik)
 {
     for (int i=0; i<9; i++) {
         pole[i]->resetuj();
-        dodajCzat(INFO,"Koniec gry");
+    }
+    dodajCzat(INFO,"Koniec gry");
+    if(wynik==WYGRYWA_KOLKO) {
+        dodajCzat(INFO, "Wygrał gracz: KÓŁKO");
+    } else if (wynik==WYGRYWA_KRZYZYK) {
+        dodajCzat(INFO, "Wygrał gracz: KRZYŻYK");
+    } else {
+        dodajCzat(INFO, "REMIS");
     }
 }
 

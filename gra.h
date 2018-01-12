@@ -46,7 +46,7 @@ public:
 
             struct
             {
-                uint8_t rezultat;
+                int rezultat;
             } potwierdzenie;
 
             struct
