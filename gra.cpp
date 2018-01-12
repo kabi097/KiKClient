@@ -7,11 +7,14 @@ Gra::Gra(QWidget *parent) :
     connect(socket,SIGNAL(disconnected()),this,SLOT(rozlacz()));
     connect(socket,SIGNAL(readyRead()),SLOT(czytajDane()));
 
+    QWidget *mainwidget = new QWidget(this);
+
     setWindowTitle("Kółko i krzyżyk");
     QWidget *plansza = new QWidget(this);
 
-    QVBoxLayout *layout = new QVBoxLayout;
+    QHBoxLayout *mainlayout = new QHBoxLayout;
 
+    //Siatka
     QGridLayout *siatka = new QGridLayout;
 
     int col=0;
@@ -38,8 +41,23 @@ Gra::Gra(QWidget *parent) :
     rezultat = NIEROZSTRZYGNIETA;
     aktualny_gracz = G_KOLKO;
 
+    //Czat
+    QVBoxLayout *czatbox = new QVBoxLayout;
+    czatout = new QTextEdit;
+    czatout->setReadOnly(true);
+    czatbox->addWidget(czatout);
+
+    czatin = new QLineEdit;
+    czatbox->addWidget(czatin);
+    connect(czatin,SIGNAL(returnPressed()),this,SLOT(wyslijTekst()));
+
+    mainlayout->addLayout(siatka);
+    mainlayout->addLayout(czatbox);
+
     plansza->setLayout(siatka);
-    setCentralWidget(plansza);
+    mainwidget->setLayout(mainlayout);
+
+    setCentralWidget(mainwidget);
 }
 
 Gra::rezultat_t Gra::rezultat_gry()
@@ -113,6 +131,7 @@ Gra::~Gra()
 void Gra::przyciskClicked()
 {
     if (socket->state() == QAbstractSocket::ConnectedState) {
+        poddajSie();
         socket->abort();
     } else {
         polacz();
@@ -130,6 +149,7 @@ void Gra::polacz()
             connectButton->setText("Rozłącz");
             address->setDisabled(true);
             port->setDisabled(true);
+            dodajCzat(INFO,QString("Połączono z serwerem ").append(address->text()));
         } else {
             qDebug() << "Nie udało się połączyć z serwerem";
         }
@@ -146,6 +166,7 @@ void Gra::rozlacz()
     connectButton->setText("Połącz");
     address->setDisabled(false);
     port->setDisabled(false);
+    dodajCzat(INFO,"Zakończono połączenie");
 }
 
 void Gra::czytajDane()
@@ -156,12 +177,25 @@ void Gra::czytajDane()
 
     struct Gra::wiadomosc *wiad = (struct Gra::wiadomosc *) tmp; //dane.constData();
 
+    //TODO
+    QString oldinfo;
+    QString newinfo;
+    plansza_t mojaPolansza;
+
     switch (wiad->type) {
     case Gra::WIAD_TEKST:
-
+        dodajCzat(SERWER,wiad->dane.czat.napis);
+        break;
+    case Gra::PLANSZA:
+        mojaPolansza = wiad->dane.mojaMapa.plansza;
+        for (int i=0; i<9; i++) {
+            pole[i]->zaznacz_ruch((Pole::ruch_t)mojaPolansza.ruchy[i]);
+        }
         break;
     case Gra::POTWIERDZENIE:
-
+//        if ((rezultat_t)wiad->dane.potwierdzenie.rezultat != REMIS) {
+//            koniecGry((rezultat_t)wiad->dane.potwierdzenie.rezultat);
+//        }
         break;
     default:
 
@@ -173,6 +207,22 @@ void Gra::czytajDane()
 //    }
 }
 
+void Gra::wyslijTekst()
+{
+    if (socket->state() == QAbstractSocket::ConnectedState && czatin->text().isEmpty()==false) {
+        QByteArray ba = czatin->text().toLatin1();
+        const char *tekst = ba.data();
+        char bajty[120];
+        struct wiadomosc *tmp = (struct wiadomosc *) bajty;
+        strcpy(tmp->dane.czat.napis,tekst);
+        tmp->type = Gra::WIAD_TEKST;
+        tmp->length = sizeof(bajty);
+        socket->write(bajty, tmp->length);
+        dodajCzat(KLIENT,czatin->text());
+        czatin->setText("");
+    }
+}
+
 
 QByteArray Gra::IntToArray(qint32 source) //Use qint32 to ensure that the number have 4 bytes
 {
@@ -182,24 +232,61 @@ QByteArray Gra::IntToArray(qint32 source) //Use qint32 to ensure that the number
     return temp;
 }
 
+void Gra::poddajSie()
+{
+    char bajty[120];
+    struct wiadomosc *wiad = (struct wiadomosc*) bajty;
+    wiad->dane.poddanie.poddalSie = 1;
+    wiad->length = sizeof(bajty);
+    socket->write(bajty,wiad->length);
+    dodajCzat(INFO, "Poddałeś się.");
+    qDebug() << "Poddałem sie";
+}
+
+void Gra::dodajCzat(Gra::czat_t rodzaj, QString tekst)
+{
+    QString oldinfo = czatout->toHtml();
+    QString newinfo;
+    switch (rodzaj) {
+    case Gra::KLIENT:
+        newinfo = "<b>Klient</b>: ";
+        break;
+    case Gra::SERWER:
+        newinfo = "<b>Serwer</b>: ";
+        break;
+    default:
+        newinfo = "<font color='blue'>Info</font>: ";
+        tekst.prepend("<i>");
+        tekst.append("</i>");
+        break;
+    }
+    newinfo.append(tekst);
+    czatout->setHtml(oldinfo.append(newinfo));
+
+    //TODO - To nie działa
+    czatout->setReadOnly(false);
+    czatout->ensureCursorVisible();
+    czatout->verticalScrollBar()->setValue(czatout->verticalScrollBar()->maximum());
+    czatout->setReadOnly(true);
+}
+
+void Gra::koniecGry(Gra::rezultat_t wynik)
+{
+    for (int i=0; i<9; i++) {
+        pole[i]->resetuj();
+        dodajCzat(INFO,"Koniec gry");
+    }
+}
+
 void Gra::wybranoPole(int i)
 {
     if (socket->state() == QAbstractSocket::ConnectedState) {
-
         char bajty[120];
         struct wiadomosc *tmp = (struct wiadomosc *) bajty;
-        //strcpy(tmp->dane.wiadomosc.napis,"Hello World!");
         tmp->type = Gra::RUCH;
         tmp->dane.ruch.x = i/3;
         tmp->dane.ruch.y = i%3;
-        //tmp->len = sizeof(bajty)+4; //4 - na cholere to 4???
         tmp->length = sizeof(bajty); //4
-
-
         socket->write(bajty, tmp->length);
-        socket->waitForReadyRead(3000);
-
-        //char input = (char)i+1;
-        //socket->write((char *) tmp, tmp->len);
     }
 }

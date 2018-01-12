@@ -10,6 +10,8 @@
 #include <QMessageBox>
 #include <QTcpSocket>
 #include <QHostAddress>
+#include <QTextEdit>
+#include <QScrollBar>
 #include "pole.h"
 
 class Gra : public QMainWindow
@@ -22,9 +24,13 @@ public:
         POTWIERDZENIE,
         WIAD_TEKST,
         RUCH,
-        PODDAJ
+        PODDAJ,
+        PLANSZA
     } type_t;
 
+    typedef struct {
+        Pole::ruch_t ruchy[9];
+    } plansza_t;
 
     struct wiadomosc
     {
@@ -53,6 +59,10 @@ public:
                 uint8_t x;
                 uint8_t y;
             } ruch;
+
+            struct {
+                plansza_t plansza;
+            } mojaMapa;
         } dane;
     }  __attribute__ ((packed));
 
@@ -70,6 +80,15 @@ public:
       NIEROZSTRZYGNIETA =  2
     } rezultat_t;
 
+    //---------------
+    typedef enum
+    {
+      KLIENT,
+      SERWER,
+      INFO
+    } czat_t;
+    //--------------
+
     explicit Gra(QWidget *parent = 0);
 
     rezultat_t rezultat_gry();
@@ -77,6 +96,9 @@ public:
     void zmien_gracza();
     void czysc_plansze();
     QByteArray IntToArray(qint32 source);
+    void poddajSie();
+    void dodajCzat(czat_t rodzaj, QString tekst);
+    void koniecGry(rezultat_t wynik);
 
     int nrPola;
 
@@ -90,12 +112,15 @@ private:
     QPushButton *connectButton;
     QLineEdit *address;
     QLineEdit *port;
+    QLineEdit *czatin;
+    QTextEdit *czatout;
 
 public slots:
     void przyciskClicked();
     void polacz();
     void rozlacz();
     void czytajDane();
+    void wyslijTekst();
     void wybranoPole(int i);
 };
 
